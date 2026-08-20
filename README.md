@@ -4,6 +4,8 @@ A macOS menu-bar app that watches your GitLab merge requests and shows you what 
 
 Click the tray icon to open a small popup with your merge requests, grouped into categories. It refreshes automatically every 60 seconds.
 
+<img src="docs/screenshots/overview.png" alt="gitlab-bar popup showing merge requests grouped into categories" width="320" />
+
 ## Setup
 
 1. Create a GitLab personal access token with `read_api` scope.
@@ -28,6 +30,10 @@ Small icon chips on a merge request row — hover one for a one-line explanation
 - **Warning-triangle icon** (red) — the MR has merge conflicts with its target branch. Shown in any category.
 - **Clock icon** (orange) — the MR carries the `qa_pending` GitLab label. Shown in any category, not just "Awaiting Review".
 - **Checkmark icon + number** (blue) — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). The number is exactly how many are still missing — 2 if it has none yet, 1 if it already has one.
+
+| Merge conflicts | QA pending | Needs approvals |
+|---|---|---|
+| ![Merge conflicts badge](docs/screenshots/badge-merge-conflicts.png) | ![QA pending badge](docs/screenshots/badge-qa-pending.png) | ![Needs approvals badge](docs/screenshots/badge-approval.png) |
 
 ## Row layout
 
