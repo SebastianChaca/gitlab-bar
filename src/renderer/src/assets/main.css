@@ -139,12 +139,13 @@ body {
 .mr-row {
   display: flex;
   align-items: center;
-  padding: 7px 4px;
+  padding: 7px 8px;
   cursor: pointer;
 }
 
 .mr-row:hover {
   background: var(--ev-c-black-soft);
+  border-radius: 4px;
 }
 
 .mr-row-text {
@@ -199,7 +200,53 @@ body {
   background: rgba(74, 158, 255, 0.15);
 }
 
+/* Icon-only (or icon + short count) badges: square-ish chip instead of a
+   text pill, so a row of several takes a fraction of the space the old
+   text badges ("Needs 2 approvals", "QA pending") needed. */
+.mr-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+}
+
 .mr-badge-danger {
   color: #ff6b6b;
   background: rgba(255, 107, 107, 0.15);
+}
+
+/* Custom hover tooltip for badges, via `data-tooltip` — instant and styled
+   to match the dark UI, instead of the browser's native `title` tooltip
+   (slow to appear, can't be styled, looks out of place here). */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 5px);
+  /* Anchored to the badge's right edge, growing leftward — badges sit at the
+     right of a 280px-wide row, so centering the tooltip (the old approach)
+     pushed it past the right edge and forced a horizontal scrollbar. */
+  right: 0;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #000;
+  color: #f2f2f2;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s ease;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
 }

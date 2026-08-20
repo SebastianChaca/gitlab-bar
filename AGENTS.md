@@ -74,11 +74,26 @@ If you change what counts as "actionable," both the tray badge and notifications
 
 Exposes exactly five methods + two event subscriptions (`onMergeRequestsUpdate`, `onLoggedOut`) via `contextBridge`. IPC channel name strings are **hardcoded here** rather than imported from `gitlab/ipc.ts`, on purpose — that module transitively pulls in Node/Electron-main-only APIs (`fs`, `app`, `safeStorage`) which must not end up in this sandboxed script. If you rename a channel in `ipc.ts`, update the string literal here too.
 
-## `src/renderer/src/App.tsx` — the UI
+## `src/renderer/src/` — the UI
 
-Single file, function components, no state management library. `App`'s `view` state machine: `checking → needs-credentials | loading → ready | error`. Renders one `<MergeRequestSection>` per category; sections with a possibly-empty list (`approved`, `readyToMerge`, `awaitingReview`) only render when non-empty.
+`App.tsx` holds only the top-level state machine (`checking → needs-credentials | loading → ready | error`) and the bootstrap effect (initial fetch + `onMergeRequestsUpdate`/`onLoggedOut` subscriptions). Everything else was split out into `components/` once `App.tsx` grew past ~280 lines and got hard to scan:
 
-`MergeRequestRow` layout, deliberate: the title (`.mr-title`) sits alone on its own row, full width — it never shares horizontal space with badges. Project path + badges (`.mr-row-meta`) sit together on a second row below it, and `flex-wrap: wrap` there lets them spill onto a third line rather than fight the title for space. This exists because badges used to sit beside the title on one row (`margin-left: auto` pushing them right) — with two verbose badges (e.g. "QA" + "Needs 2 approvals") in a 280px popup, that squeezed the title down to a sliver, visually overlapping it. Keep new badges inside `.mr-row-meta`, not beside `.mr-title`.
+| File | Responsibility |
+|---|---|
+| `components/CredentialsForm.tsx` | The "Connect GitLab" token form. |
+| `components/MergeRequestSection.tsx` | One category section — title, empty state, and `sortByProject` (sorts a section's items by `projectPath` so same-repo MRs sit together; deliberately *not* sub-grouped, per an explicit product call — see below). |
+| `components/MergeRequestRow.tsx` | One MR row: title, project name (last path segment via `projectName()`, full path in a `title` tooltip), and badges. Click behavior (`openMergeRequest` + `markMergeRequestSeen`) lives here. |
+| `components/icons.tsx` | The three inline SVG badge icons (`ConflictIcon`, `ClockIcon`, `CheckCircleIcon`), sharing one `ICON_PROPS` object. |
+
+No new abstraction beyond this — still plain function components, no state management library, no barrel `index.ts`.
+
+`App` renders one `<MergeRequestSection>` per category; sections with a possibly-empty list (`approved`, `readyToMerge`, `awaitingReview`) only render when non-empty.
+
+### Row layout, deliberate
+
+The title (`.mr-title`) sits alone on its own row, full width — it never shares horizontal space with badges. Project name + badges (`.mr-row-meta`) sit together on a second row below it, and `flex-wrap: wrap` there lets them spill onto a third line rather than fight the title for space. This exists because badges used to sit beside the title on one row (`margin-left: auto` pushing them right) — with two verbose text badges (e.g. "QA" + "Needs 2 approvals") in a 280px popup, that squeezed the title down to a sliver, visually overlapping it. Keep new badges inside `.mr-row-meta`, not beside `.mr-title`.
+
+Badges are icon-only (`.mr-badge-icon`, `icons.tsx`) rather than text — text badges ate too much of the 280px width even after being moved off the title's row. Each carries a short `data-tooltip` (see `[data-tooltip]` in `main.css`) rendered via a custom CSS `::after` tooltip instead of the native `title` attribute — native tooltips are slow to appear and can't be themed to match the dark UI. **Keep tooltip text to a couple of words** ("Merge conflicts", "QA pending", "2 approvals needed"): the tooltip anchors to the *badge's own* right edge (`right: 0`, growing leftward) since badges usually sit near the row's right edge in a 280px popup — a longer, centered tooltip (the original approach) pushed past the edge and forced horizontal scroll. `aria-label` carries the same meaning for screen readers without triggering a second, native tooltip.
 
 ## Extending the categorization (recipe)
 
@@ -87,7 +102,7 @@ Adding a new category or badge touches the same four files every time, in this o
 1. `client.ts` — add the API call (or field on `GitLabMergeRequest`) if GitLab doesn't already give you the data.
 2. `service.ts` — compute it inside `fetchMergeRequestsUpdate`/`toSummary`, decide the failure-isolation story (batch vs. per-MR try/catch, per the pattern above).
 2. `types.ts` — add the field to `MergeRequestSummary` and/or `MergeRequestsResult`.
-4. `App.tsx` (+ `main.css`) — render it: a new `<MergeRequestSection>` for a category, a new `<span className="mr-badge">` inside `.mr-row-meta` for a badge (never beside `.mr-title` — see the layout note above).
+4. `components/MergeRequestRow.tsx` (+ `main.css`) — render it: a new icon in `icons.tsx` + a new `<span className="mr-badge mr-badge-icon" data-tooltip="...">` inside `.mr-row-meta` for a badge (never beside `.mr-title` — see the layout note above), or a new `<MergeRequestSection>` in `App.tsx` for a category.
 
 Prefer a badge over a new category when the underlying signal is a *modifier* of an existing list (e.g. "still needs a second approval") rather than a genuinely new "why is this MR in front of me" reason — this keeps the section count from creeping up indefinitely. This was an explicit product decision made while building the QA/second-approval badges, not an accident.
 

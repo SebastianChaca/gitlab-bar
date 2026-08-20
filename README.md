@@ -23,13 +23,18 @@ An MR only disappears from these lists once it's merged, closed, or no longer ma
 
 ## Badges
 
-Shown as small tags on a merge request row:
+Small icon chips on a merge request row — hover one for a one-line explanation:
 
-- **MC** (red) — the MR has merge conflicts with its target branch. Shown in any category.
-- **QA** — the MR carries the `qa_pending` GitLab label. Shown in any category, not just "Awaiting Review". Hover it to see what it means.
-- **Needs N approval(s)** — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). Says exactly how many are missing — "Needs 2 approvals" if it has none yet, "Needs 1 approval" if it already has one.
+- **Warning-triangle icon** (red) — the MR has merge conflicts with its target branch. Shown in any category.
+- **Clock icon** (orange) — the MR carries the `qa_pending` GitLab label. Shown in any category, not just "Awaiting Review".
+- **Checkmark icon + number** (blue) — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). The number is exactly how many are still missing — 2 if it has none yet, 1 if it already has one.
 
-Badges sit on their own line below the title, next to the project path, and wrap onto another line if there isn't room — the title always keeps the full row width to itself and is never covered.
+## Row layout
+
+- **Title** — always full-width, on its own line, never truncated by badges.
+- **Project name + badges** — sit together on the line below the title, next to each other, wrapping onto another line if there isn't room.
+- **Project name** — just the repo name (e.g. `shipnow-frontend`), not the full group path — hover it to see the full path.
+- Within each section, rows are sorted by project so MRs from the same repo sit next to each other (no sub-grouping, just ordering).
 
 ## Staying on top of things without opening the popup
 
