@@ -72,6 +72,9 @@ function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.Element
         <span className="mr-project">{mr.projectPath}</span>
       </div>
       {mr.qaPending && <span className="mr-badge">QA pending</span>}
+      {mr.awaitingSecondApproval && (
+        <span className="mr-badge mr-badge-info">Approval pending</span>
+      )}
     </li>
   )
 }

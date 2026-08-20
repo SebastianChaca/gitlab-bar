@@ -36,7 +36,11 @@ function projectPathFromMr(mr: GitLabMergeRequest): string {
   return match ? match[1] : ''
 }
 
-function toSummary(mr: GitLabMergeRequest, hasNewComment: boolean): MergeRequestSummary {
+function toSummary(
+  mr: GitLabMergeRequest,
+  hasNewComment: boolean,
+  awaitingSecondApproval = false
+): MergeRequestSummary {
   return {
     id: mr.id,
     iid: mr.iid,
@@ -47,7 +51,8 @@ function toSummary(mr: GitLabMergeRequest, hasNewComment: boolean): MergeRequest
     authorUsername: mr.author.username,
     updatedAt: mr.updated_at,
     hasNewComment,
-    qaPending: mr.labels?.includes('qa_pending') ?? false
+    qaPending: mr.labels?.includes('qa_pending') ?? false,
+    awaitingSecondApproval
   }
 }
 
@@ -160,7 +165,10 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
 
   // MRs the user is assigned to, that already have an approval from someone
   // other than themselves — a "ready to merge, ball's in your court" signal,
-  // distinct from the reviewer-facing `approved` list above.
+  // distinct from the reviewer-facing `approved` list above. Our team policy
+  // requires two approvals before merging, so one is enough to surface the MR
+  // here but the second-approval badge flags it as not fully ready yet.
+  const REQUIRED_APPROVALS = 2
   const myMrs = assigneeMrs
   const approvedByOthersResults = await Promise.all(
     myMrs.map(async (mr) => {
@@ -171,10 +179,11 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
           mr.project_id,
           mr.iid
         )
-        const approvedByOther = approvals.approved_by.some(
+        const othersApprovedCount = approvals.approved_by.filter(
           (entry) => entry.user.username !== username
-        )
-        return approvedByOther ? toSummary(mr, false) : null
+        ).length
+        if (othersApprovedCount === 0) return null
+        return toSummary(mr, false, othersApprovedCount < REQUIRED_APPROVALS)
       } catch (error) {
         console.warn(`gitlab: failed to check approvals for MR ${mr.id}`, error)
         return null

@@ -15,6 +15,8 @@ export interface MergeRequestSummary {
   hasNewComment: boolean
   /** Whether the MR carries the `qa_pending` GitLab label. */
   qaPending: boolean
+  /** Present only for MRs in the "ready to merge" list: true if it still needs a second approval. */
+  awaitingSecondApproval: boolean
 }
 
 export interface MergeRequestsResult {
