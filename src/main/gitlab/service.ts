@@ -4,9 +4,10 @@ import {
   fetchAuthenticatedUsername,
   fetchAuthorMergeRequests,
   fetchMergeRequestApprovals,
-  fetchRecentNotes,
+  fetchMergeRequestDiscussions,
   fetchReviewerMergeRequests,
-  type GitLabMergeRequest
+  type GitLabMergeRequest,
+  type GitLabNote
 } from './client'
 import {
   getCachedUsername,
@@ -39,7 +40,7 @@ function projectPathFromMr(mr: GitLabMergeRequest): string {
 function toSummary(
   mr: GitLabMergeRequest,
   hasNewComment: boolean,
-  awaitingSecondApproval = false
+  approvalsRemaining = 0
 ): MergeRequestSummary {
   return {
     id: mr.id,
@@ -52,7 +53,8 @@ function toSummary(
     updatedAt: mr.updated_at,
     hasNewComment,
     qaPending: mr.labels?.includes('qa_pending') ?? false,
-    awaitingSecondApproval
+    qaApproved: mr.labels?.includes('qa_approved') ?? false,
+    approvalsRemaining
   }
 }
 
@@ -125,35 +127,55 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
 
   const newCommentsResults = await Promise.all(
     candidateMrs.map(async (mr) => {
-      // The entire per-MR check is wrapped so that one MR's notes failing to
-      // load, or having unexpected shape (e.g. a null `author`), just
-      // excludes that MR from `newComments` this cycle instead of rejecting
-      // the whole `Promise.all` and sinking the batch (including the
-      // already-fetched `reviewRequested` list).
+      // The entire per-MR check is wrapped so that one MR's discussions
+      // failing to load, or having unexpected shape (e.g. a null `author`),
+      // just excludes that MR from `newComments` this cycle instead of
+      // rejecting the whole `Promise.all` and sinking the batch (including
+      // the already-fetched `reviewRequested` list).
       try {
-        const recentNotes = await fetchRecentNotes(instanceUrl, token, mr.project_id, mr.iid)
-
-        // Scan newest-first for the first real human comment, skipping over
-        // any system notes (pushes, label changes, approvals, etc.) that may
-        // sit above it. If none is found within this page, treat it as no
-        // new comment rather than paging back further.
-        const latestHumanNote = recentNotes.find(
-          (note) => !note.system && note.author?.username !== username
+        const discussions = await fetchMergeRequestDiscussions(
+          instanceUrl,
+          token,
+          mr.project_id,
+          mr.iid
         )
-        if (!latestHumanNote) return null
 
-        latestNoteCache.set(mr.id, {
-          projectId: mr.project_id,
-          iid: mr.iid,
-          latestNoteId: latestHumanNote.id
-        })
+        const actionableNotes = discussions
+          .flatMap((discussion) => discussion.notes)
+          .filter((note) => !note.system && note.author?.username !== username)
+
+        // GitLab is the source of truth for review threads: a resolvable
+        // note (a diff/review comment) only counts while its thread is
+        // still unresolved — resolving it in GitLab itself (any client)
+        // clears it here too, no local "seen" tracking needed.
+        const hasUnresolvedThread = actionableNotes.some(
+          (note) => note.resolvable && !note.resolved
+        )
+
+        // Plain top-level comments are never resolvable, so GitLab has no
+        // "done with this" signal for them — fall back to the local
+        // last-seen-id tracking (cleared by clicking the row in the app).
+        const latestNonResolvable = actionableNotes
+          .filter((note) => !note.resolvable)
+          .sort((a: GitLabNote, b: GitLabNote) => b.id - a.id)[0]
+
+        if (latestNonResolvable) {
+          latestNoteCache.set(mr.id, {
+            projectId: mr.project_id,
+            iid: mr.iid,
+            latestNoteId: latestNonResolvable.id
+          })
+        }
+
+        if (hasUnresolvedThread) return toSummary(mr, true)
+        if (!latestNonResolvable) return null
 
         const lastSeenNoteId = await getLastSeenNoteId(mr.id)
-        if (!isNoteNewerThanLastSeen(latestHumanNote.id, lastSeenNoteId)) return null
+        if (!isNoteNewerThanLastSeen(latestNonResolvable.id, lastSeenNoteId)) return null
 
         return toSummary(mr, true)
       } catch (error) {
-        console.warn(`gitlab: failed to check notes for MR ${mr.id}`, error)
+        console.warn(`gitlab: failed to check discussions for MR ${mr.id}`, error)
         return null
       }
     })
@@ -163,15 +185,16 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
     (summary): summary is MergeRequestSummary => summary !== null
   )
 
-  // MRs the user is assigned to, that already have an approval from someone
-  // other than themselves — a "ready to merge, ball's in your court" signal,
-  // distinct from the reviewer-facing `approved` list above. Our team policy
-  // requires two approvals before merging, so one is enough to surface the MR
-  // here but the second-approval badge flags it as not fully ready yet.
+  // Every MR the user is assigned to is split into two buckets: fully ready
+  // to merge, or everything else. Unlike `newComments` above, an MR here is
+  // never dropped on a per-MR failure (approvals fetch erroring, zero
+  // approvals so far, etc.) — it just falls back to "awaiting review" instead
+  // of vanishing from the app entirely. An MR assigned today with no
+  // approvals and no comments yet must still be visible somewhere.
   const REQUIRED_APPROVALS = 2
-  const myMrs = assigneeMrs
-  const approvedByOthersResults = await Promise.all(
-    myMrs.map(async (mr) => {
+  const assigneeResults = await Promise.all(
+    assigneeMrs.map(async (mr) => {
+      let othersApprovedCount = 0
       try {
         const approvals = await fetchMergeRequestApprovals(
           instanceUrl,
@@ -179,23 +202,30 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
           mr.project_id,
           mr.iid
         )
-        const othersApprovedCount = approvals.approved_by.filter(
+        othersApprovedCount = approvals.approved_by.filter(
           (entry) => entry.user.username !== username
         ).length
-        if (othersApprovedCount === 0) return null
-        return toSummary(mr, false, othersApprovedCount < REQUIRED_APPROVALS)
       } catch (error) {
         console.warn(`gitlab: failed to check approvals for MR ${mr.id}`, error)
-        return null
       }
+
+      const approvalsRemaining = Math.max(REQUIRED_APPROVALS - othersApprovedCount, 0)
+      const summary = toSummary(mr, false, approvalsRemaining)
+      // Ready to merge requires BOTH signals: code review fully approved
+      // *and* QA has signed off (the `qa_approved` label). Either one alone
+      // just means the MR moves to (or stays in) "awaiting review".
+      const isReadyToMerge = approvalsRemaining === 0 && summary.qaApproved
+      return { summary, isReadyToMerge }
     })
   )
 
-  const approvedByOthers = approvedByOthersResults.filter(
-    (summary): summary is MergeRequestSummary => summary !== null
-  )
+  const readyToMerge: MergeRequestSummary[] = []
+  const awaitingReview: MergeRequestSummary[] = []
+  for (const { summary, isReadyToMerge } of assigneeResults) {
+    ;(isReadyToMerge ? readyToMerge : awaitingReview).push(summary)
+  }
 
-  return { reviewRequested, newComments, approved, approvedByOthers }
+  return { reviewRequested, newComments, approved, readyToMerge, awaitingReview }
 }
 
 /**
@@ -218,4 +248,24 @@ export async function markMergeRequestSeen(mergeRequestId: number): Promise<void
  */
 export function clearLatestNoteCache(): void {
   latestNoteCache.clear()
+}
+
+/**
+ * MRs that need the user's attention right now: awaiting their review, with
+ * an unread comment, or their own MR that's already fully approved and ready
+ * to merge. Deliberately excludes `awaitingReview` — those are the user's
+ * own MRs waiting on *other people* to act, not on the user. Deduped by id,
+ * since the same MR can land in more than one of the source lists (e.g. a
+ * reviewer MR that also picked up a new comment).
+ */
+export function getActionableMergeRequests(result: MergeRequestsResult): MergeRequestSummary[] {
+  const byId = new Map<number, MergeRequestSummary>()
+  for (const mr of [...result.reviewRequested, ...result.newComments, ...result.readyToMerge]) {
+    byId.set(mr.id, mr)
+  }
+  return [...byId.values()]
+}
+
+export function countActionableMergeRequests(result: MergeRequestsResult): number {
+  return getActionableMergeRequests(result).length
 }

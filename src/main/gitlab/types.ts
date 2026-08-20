@@ -15,16 +15,20 @@ export interface MergeRequestSummary {
   hasNewComment: boolean
   /** Whether the MR carries the `qa_pending` GitLab label. */
   qaPending: boolean
-  /** Present only for MRs in the "ready to merge" list: true if it still needs a second approval. */
-  awaitingSecondApproval: boolean
+  /** Whether the MR carries the `qa_approved` GitLab label. */
+  qaApproved: boolean
+  /** Meaningful only for MRs the user is assigned to: how many more non-self approvals it still needs (0, 1, or 2). */
+  approvalsRemaining: number
 }
 
 export interface MergeRequestsResult {
   reviewRequested: MergeRequestSummary[]
   newComments: MergeRequestSummary[]
   approved: MergeRequestSummary[]
-  /** Open MRs the user authored or is assigned to, already approved by someone else. */
-  approvedByOthers: MergeRequestSummary[]
+  /** MRs the user is assigned to, fully approved (2+ non-self approvals) AND qa_approved. */
+  readyToMerge: MergeRequestSummary[]
+  /** MRs the user is assigned to that aren't in `readyToMerge` yet — includes ones with zero approvals so far. */
+  awaitingReview: MergeRequestSummary[]
 }
 
 export interface GitLabCredentialsInput {

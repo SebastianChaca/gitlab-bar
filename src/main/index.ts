@@ -94,7 +94,10 @@ function buildTrayContextMenu(loggedIn: boolean): Menu {
       label: 'Log out',
       enabled: loggedIn,
       click: () => {
-        void logOutOfGitLab(() => popup)
+        void logOutOfGitLab(
+          () => popup,
+          () => tray
+        )
       }
     },
     { type: 'separator' },
@@ -156,8 +159,14 @@ if (!gotSingleInstanceLock) {
       popup.show()
     }
 
-    registerGitLabIpcHandlers(() => popup)
-    startGitLabPolling(() => popup)
+    registerGitLabIpcHandlers(
+      () => popup,
+      () => tray
+    )
+    startGitLabPolling(
+      () => popup,
+      () => tray
+    )
   })
 
   app.on('window-all-closed', () => {

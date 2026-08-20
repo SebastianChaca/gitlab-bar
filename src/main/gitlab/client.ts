@@ -28,6 +28,17 @@ export interface GitLabNote {
   // Nullable: GitLab omits/nulls this for notes from deleted users or some
   // service accounts, so callers must not assume it's always present.
   author: { username: string } | null
+  // Only diff/review-thread comments are resolvable — plain top-level MR
+  // comments always come back with `resolvable: false` and never carry a
+  // meaningful `resolved` value.
+  resolvable: boolean
+  resolved: boolean
+}
+
+export interface GitLabDiscussion {
+  id: string
+  individual_note: boolean
+  notes: GitLabNote[]
 }
 
 export class GitLabApiError extends Error {
@@ -147,27 +158,22 @@ export async function fetchMergeRequestApprovals(
 }
 
 /**
- * Most recent notes (comments) on a merge request, newest first. Capped to a
- * small page (default 20) — GitLab frequently interleaves system notes
- * (pushes, label changes, reassignments, approvals) with real human
- * comments, so callers need more than just the single latest note to find
- * the latest *human* one.
+ * All discussion threads on a merge request, each with its notes and their
+ * `resolvable`/`resolved` state. Unlike the flat `/notes` endpoint, this is
+ * the only way to know whether a review comment's thread has actually been
+ * resolved in GitLab.
  */
-export async function fetchRecentNotes(
+export async function fetchMergeRequestDiscussions(
   instanceUrl: string,
   token: string,
   projectId: number,
   iid: number,
-  perPage = 20
-): Promise<GitLabNote[]> {
-  const query = new URLSearchParams({
-    order_by: 'created_at',
-    sort: 'desc',
-    per_page: String(perPage)
-  })
-  return gitlabFetch<GitLabNote[]>(
+  perPage = 100
+): Promise<GitLabDiscussion[]> {
+  const query = new URLSearchParams({ per_page: String(perPage) })
+  return gitlabFetch<GitLabDiscussion[]>(
     instanceUrl,
     token,
-    `/projects/${projectId}/merge_requests/${iid}/notes?${query}`
+    `/projects/${projectId}/merge_requests/${iid}/discussions?${query}`
   )
 }

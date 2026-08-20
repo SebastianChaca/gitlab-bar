@@ -150,6 +150,7 @@ body {
 .mr-row-text {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
 }
 
@@ -161,7 +162,20 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Project path + badges share this row, below the title (which always keeps
+   the full row width to itself) — wraps onto another line rather than
+   squeezing the title when there isn't room for everything. */
+.mr-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 2px;
+}
+
 .mr-project {
+  flex: 1;
+  min-width: 40px;
   font-size: 11px;
   color: var(--ev-c-text-3);
   white-space: nowrap;
@@ -171,19 +185,13 @@ body {
 
 .mr-badge {
   flex-shrink: 0;
-  margin-left: 6px;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: #f5a623;
   background: rgba(245, 166, 35, 0.15);
-}
-
-.mr-badge:first-of-type {
-  margin-left: auto;
 }
 
 .mr-badge-info {

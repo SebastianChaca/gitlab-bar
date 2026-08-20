@@ -69,12 +69,20 @@ function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.Element
     <li className="mr-row" onClick={handleClick}>
       <div className="mr-row-text">
         <span className="mr-title">{mr.title}</span>
-        <span className="mr-project">{mr.projectPath}</span>
+        <div className="mr-row-meta">
+          <span className="mr-project">{mr.projectPath}</span>
+          {mr.qaPending && (
+            <span className="mr-badge" title="Carries the qa_pending label">
+              QA
+            </span>
+          )}
+          {mr.approvalsRemaining > 0 && (
+            <span className="mr-badge mr-badge-info">
+              Needs {mr.approvalsRemaining} approval{mr.approvalsRemaining > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
       </div>
-      {mr.qaPending && <span className="mr-badge">QA pending</span>}
-      {mr.awaitingSecondApproval && (
-        <span className="mr-badge mr-badge-info">1 Approval pending</span>
-      )}
     </li>
   )
 }
@@ -185,8 +193,11 @@ function App(): React.JSX.Element {
       {view.data.approved.length > 0 && (
         <MergeRequestSection title="Approved by me" items={view.data.approved} />
       )}
-      {view.data.approvedByOthers.length > 0 && (
-        <MergeRequestSection title="Ready to Merge" items={view.data.approvedByOthers} />
+      {view.data.readyToMerge.length > 0 && (
+        <MergeRequestSection title="Ready to Merge" items={view.data.readyToMerge} />
+      )}
+      {view.data.awaitingReview.length > 0 && (
+        <MergeRequestSection title="Awaiting Review" items={view.data.awaitingReview} />
       )}
     </div>
   )
