@@ -71,6 +71,11 @@ function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.Element
         <span className="mr-title">{mr.title}</span>
         <div className="mr-row-meta">
           <span className="mr-project">{mr.projectPath}</span>
+          {mr.hasConflicts && (
+            <span className="mr-badge mr-badge-danger" title="Has merge conflicts">
+              MC
+            </span>
+          )}
           {mr.qaPending && (
             <span className="mr-badge" title="Carries the qa_pending label">
               QA

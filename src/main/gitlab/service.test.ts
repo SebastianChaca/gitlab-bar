@@ -106,6 +106,18 @@ describe('fetchMergeRequestsUpdate', () => {
     expect(result.reviewRequested.find((m) => m.id === 2)?.qaPending).toBe(false)
   })
 
+  it('flags hasConflicts from has_conflicts, regardless of category', async () => {
+    vi.mocked(client.fetchReviewerMergeRequests).mockResolvedValue([
+      mr({ id: 1, has_conflicts: true }),
+      mr({ id: 2, has_conflicts: false })
+    ])
+
+    const result = await fetchMergeRequestsUpdate()
+
+    expect(result.reviewRequested.find((m) => m.id === 1)?.hasConflicts).toBe(true)
+    expect(result.reviewRequested.find((m) => m.id === 2)?.hasConflicts).toBe(false)
+  })
+
   it('puts an assignee MR in "Ready to Merge" only when it has 2+ approvals AND the qa_approved label', async () => {
     const fullyReady = mr({ id: 1, labels: ['qa_approved'] })
     const approvedButNoQa = mr({ id: 2 })
@@ -256,6 +268,7 @@ describe('getActionableMergeRequests / countActionableMergeRequests', () => {
       qaPending: false,
       qaApproved: false,
       approvalsRemaining: 0,
+      hasConflicts: false,
       ...overrides
     }
   }

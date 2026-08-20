@@ -16,6 +16,7 @@ export interface GitLabMergeRequest {
   updated_at: string
   references?: { full?: string }
   labels?: string[]
+  has_conflicts?: boolean
 }
 
 export interface GitLabApprovals {
@@ -93,7 +94,8 @@ export async function fetchReviewerMergeRequests(
     reviewer_username: username,
     state: 'opened',
     scope: 'all',
-    per_page: '100'
+    per_page: '100',
+    with_merge_status_recheck: 'true'
   })
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
 }
@@ -108,7 +110,8 @@ export async function fetchAuthorMergeRequests(
     author_username: username,
     state: 'opened',
     scope: 'all',
-    per_page: '100'
+    per_page: '100',
+    with_merge_status_recheck: 'true'
   })
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
 }
@@ -123,7 +126,8 @@ export async function fetchAssigneeMergeRequests(
     assignee_username: username,
     state: 'opened',
     scope: 'all',
-    per_page: '100'
+    per_page: '100',
+    with_merge_status_recheck: 'true'
   })
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
 }
@@ -138,7 +142,8 @@ export async function fetchApprovedByMeMergeRequests(
     'approved_by_usernames[]': username,
     state: 'opened',
     scope: 'all',
-    per_page: '100'
+    per_page: '100',
+    with_merge_status_recheck: 'true'
   })
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
 }

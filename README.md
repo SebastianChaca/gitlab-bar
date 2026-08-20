@@ -25,6 +25,7 @@ An MR only disappears from these lists once it's merged, closed, or no longer ma
 
 Shown as small tags on a merge request row:
 
+- **MC** (red) — the MR has merge conflicts with its target branch. Shown in any category.
 - **QA** — the MR carries the `qa_pending` GitLab label. Shown in any category, not just "Awaiting Review". Hover it to see what it means.
 - **Needs N approval(s)** — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). Says exactly how many are missing — "Needs 2 approvals" if it has none yet, "Needs 1 approval" if it already has one.
 

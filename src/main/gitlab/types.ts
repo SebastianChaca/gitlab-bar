@@ -19,6 +19,8 @@ export interface MergeRequestSummary {
   qaApproved: boolean
   /** Meaningful only for MRs the user is assigned to: how many more non-self approvals it still needs (0, 1, or 2). */
   approvalsRemaining: number
+  /** Whether GitLab reports merge conflicts (`has_conflicts`). Computed for every MR, shown wherever it's true. */
+  hasConflicts: boolean
 }
 
 export interface MergeRequestsResult {

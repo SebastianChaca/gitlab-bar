@@ -198,3 +198,8 @@ body {
   color: #4a9eff;
   background: rgba(74, 158, 255, 0.15);
 }
+
+.mr-badge-danger {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+}

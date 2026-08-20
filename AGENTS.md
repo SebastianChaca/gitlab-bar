@@ -41,7 +41,7 @@ This is where almost all domain logic lives. Five files, each with one job:
 
 GitLab's list endpoint (`GET /merge_requests`) can't answer "who approved this" or "is this ready to merge" directly — it can only filter by reviewer/author/assignee/approved-by-a-specific-user. So the categories are built by fetching several filtered lists in parallel and cross-referencing them, plus one extra per-MR call where GitLab genuinely has no batch equivalent (approvals).
 
-Fetched in parallel: MRs where the user is **reviewer**, **author**, **assignee**, and MRs **approved by the user**.
+Fetched in parallel: MRs where the user is **reviewer**, **author**, **assignee**, and MRs **approved by the user**. All four requests add `with_merge_status_recheck: 'true'` — GitLab's docs note `has_conflicts`/`merge_status` on the plain list endpoint can be stale otherwise, since listing MRs doesn't proactively recompute merge status.
 
 Categories produced (`MergeRequestsResult`):
 
@@ -55,6 +55,7 @@ Badges (fields on `MergeRequestSummary`, computed in `toSummary()`):
 - **`qaPending`** — `mr.labels.includes('qa_pending')`. Computed for every MR, shown wherever it's true.
 - **`qaApproved`** — `mr.labels.includes('qa_approved')`. Not rendered as its own badge; used as one half of the `readyToMerge` gate.
 - **`approvalsRemaining`** — meaningful for MRs the user is assignee of (both `readyToMerge` and `awaitingReview`). A **count**, not a boolean: `Math.max(REQUIRED_APPROVALS - othersApprovedCount, 0)` (`REQUIRED_APPROVALS = 2`, a local constant in `service.ts`) — 0, 1, or 2 non-self approvals still needed. This used to be a boolean (`awaitingSecondApproval`) that couldn't distinguish "0 approvals" from "1 approval", so the badge always said "1 approval pending" even for an MR with zero — fixed by making it a count the UI renders directly ("Needs 1 approval" / "Needs 2 approvals").
+- **`hasConflicts`** — `mr.has_conflicts` straight from the list response (no extra per-MR call needed). Computed for every MR, shown wherever it's true, styled red (`.mr-badge-danger`) unlike the other badges.
 
 **Failure isolation pattern, important to preserve:** the four parallel list-fetches (reviewer/author/approved/assignee) are a single `Promise.all` — if any one of them throws, the *entire* poll cycle fails and the renderer shows an error state (recovers on the next 60s tick). By contrast, every **per-MR** call (notes, approvals) never rejects the batch: `newComments` drops the offending MR on failure, while `readyToMerge`/`awaitingReview` never drop it at all (see above) — a flaky MR should never sink the whole poll, and an assignee MR should never disappear. Keep this asymmetry when adding new per-MR enrichment calls.
 

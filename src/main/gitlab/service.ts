@@ -54,7 +54,8 @@ function toSummary(
     hasNewComment,
     qaPending: mr.labels?.includes('qa_pending') ?? false,
     qaApproved: mr.labels?.includes('qa_approved') ?? false,
-    approvalsRemaining
+    approvalsRemaining,
+    hasConflicts: mr.has_conflicts ?? false
   }
 }
 
