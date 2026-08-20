@@ -71,6 +71,7 @@ function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.Element
         <span className="mr-title">{mr.title}</span>
         <span className="mr-project">{mr.projectPath}</span>
       </div>
+      {mr.qaPending && <span className="mr-badge">QA pending</span>}
     </li>
   )
 }
@@ -179,7 +180,10 @@ function App(): React.JSX.Element {
       <MergeRequestSection title="To Review" items={view.data.reviewRequested} />
       <MergeRequestSection title="New Comments" items={view.data.newComments} />
       {view.data.approved.length > 0 && (
-        <MergeRequestSection title="Approved" items={view.data.approved} />
+        <MergeRequestSection title="Approved by me" items={view.data.approved} />
+      )}
+      {view.data.approvedByOthers.length > 0 && (
+        <MergeRequestSection title="Ready to Merge" items={view.data.approvedByOthers} />
       )}
     </div>
   )

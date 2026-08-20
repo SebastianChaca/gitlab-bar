@@ -15,6 +15,11 @@ export interface GitLabMergeRequest {
   author: { username: string }
   updated_at: string
   references?: { full?: string }
+  labels?: string[]
+}
+
+export interface GitLabApprovals {
+  approved_by: { user: { username: string } }[]
 }
 
 export interface GitLabNote {
@@ -97,6 +102,21 @@ export async function fetchAuthorMergeRequests(
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
 }
 
+/** Merge requests open, where `username` is assignee. */
+export async function fetchAssigneeMergeRequests(
+  instanceUrl: string,
+  token: string,
+  username: string
+): Promise<GitLabMergeRequest[]> {
+  const query = new URLSearchParams({
+    assignee_username: username,
+    state: 'opened',
+    scope: 'all',
+    per_page: '100'
+  })
+  return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
+}
+
 /** Merge requests open, approved by `username`. */
 export async function fetchApprovedByMeMergeRequests(
   instanceUrl: string,
@@ -110,6 +130,20 @@ export async function fetchApprovedByMeMergeRequests(
     per_page: '100'
   })
   return gitlabFetch<GitLabMergeRequest[]>(instanceUrl, token, `/merge_requests?${query}`)
+}
+
+/** Approval state of a single merge request, including who has approved it. */
+export async function fetchMergeRequestApprovals(
+  instanceUrl: string,
+  token: string,
+  projectId: number,
+  iid: number
+): Promise<GitLabApprovals> {
+  return gitlabFetch<GitLabApprovals>(
+    instanceUrl,
+    token,
+    `/projects/${projectId}/merge_requests/${iid}/approvals`
+  )
 }
 
 /**

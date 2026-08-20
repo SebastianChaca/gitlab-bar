@@ -13,12 +13,16 @@ export interface MergeRequestSummary {
   updatedAt: string
   /** Present only for MRs in the "new comments" list. */
   hasNewComment: boolean
+  /** Whether the MR carries the `qa_pending` GitLab label. */
+  qaPending: boolean
 }
 
 export interface MergeRequestsResult {
   reviewRequested: MergeRequestSummary[]
   newComments: MergeRequestSummary[]
   approved: MergeRequestSummary[]
+  /** Open MRs the user authored or is assigned to, already approved by someone else. */
+  approvedByOthers: MergeRequestSummary[]
 }
 
 export interface GitLabCredentialsInput {

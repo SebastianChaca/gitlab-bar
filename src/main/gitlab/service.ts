@@ -1,7 +1,9 @@
 import {
   fetchApprovedByMeMergeRequests,
+  fetchAssigneeMergeRequests,
   fetchAuthenticatedUsername,
   fetchAuthorMergeRequests,
+  fetchMergeRequestApprovals,
   fetchRecentNotes,
   fetchReviewerMergeRequests,
   type GitLabMergeRequest
@@ -44,7 +46,8 @@ function toSummary(mr: GitLabMergeRequest, hasNewComment: boolean): MergeRequest
     projectPath: projectPathFromMr(mr),
     authorUsername: mr.author.username,
     updatedAt: mr.updated_at,
-    hasNewComment
+    hasNewComment,
+    qaPending: mr.labels?.includes('qa_pending') ?? false
   }
 }
 
@@ -90,10 +93,11 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
 
   const username = await resolveUsername(instanceUrl, token)
 
-  const [reviewerMrs, authorMrs, approvedMrs] = await Promise.all([
+  const [reviewerMrs, authorMrs, approvedMrs, assigneeMrs] = await Promise.all([
     fetchReviewerMergeRequests(instanceUrl, token, username),
     fetchAuthorMergeRequests(instanceUrl, token, username),
-    fetchApprovedByMeMergeRequests(instanceUrl, token, username)
+    fetchApprovedByMeMergeRequests(instanceUrl, token, username),
+    fetchAssigneeMergeRequests(instanceUrl, token, username)
   ])
 
   // MRs already approved by the user are surfaced in the "approved" list
@@ -112,9 +116,7 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
   // authoring, deduped by MR id (a user could be both on the same MR).
   // Already-approved MRs are excluded here too, for the same reason as
   // `reviewRequested` above — they belong in "approved" only.
-  const candidateMrs = dedupeById([reviewerMrs, authorMrs]).filter(
-    (mr) => !approvedIds.has(mr.id)
-  )
+  const candidateMrs = dedupeById([reviewerMrs, authorMrs]).filter((mr) => !approvedIds.has(mr.id))
 
   const newCommentsResults = await Promise.all(
     candidateMrs.map(async (mr) => {
@@ -156,7 +158,35 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
     (summary): summary is MergeRequestSummary => summary !== null
   )
 
-  return { reviewRequested, newComments, approved }
+  // MRs the user is assigned to, that already have an approval from someone
+  // other than themselves — a "ready to merge, ball's in your court" signal,
+  // distinct from the reviewer-facing `approved` list above.
+  const myMrs = assigneeMrs
+  const approvedByOthersResults = await Promise.all(
+    myMrs.map(async (mr) => {
+      try {
+        const approvals = await fetchMergeRequestApprovals(
+          instanceUrl,
+          token,
+          mr.project_id,
+          mr.iid
+        )
+        const approvedByOther = approvals.approved_by.some(
+          (entry) => entry.user.username !== username
+        )
+        return approvedByOther ? toSummary(mr, false) : null
+      } catch (error) {
+        console.warn(`gitlab: failed to check approvals for MR ${mr.id}`, error)
+        return null
+      }
+    })
+  )
+
+  const approvedByOthers = approvedByOthersResults.filter(
+    (summary): summary is MergeRequestSummary => summary !== null
+  )
+
+  return { reviewRequested, newComments, approved, approvedByOthers }
 }
 
 /**
