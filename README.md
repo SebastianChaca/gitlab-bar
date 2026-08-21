@@ -31,6 +31,7 @@ Small icon chips on a merge request row — hover one for a one-line explanation
 
 - **Warning-triangle icon** (red) — the MR has merge conflicts with its target branch. Shown in any category.
 - **Clock icon** (orange) — the MR carries the `qa_pending` GitLab label. Shown in any category, not just "Awaiting Review".
+- **Clock icon** (green) — the MR carries the `qa_approved` GitLab label. Only shown in "Awaiting Review" — it means QA already signed off, so what's left is just the missing code-review approvals.
 - **Checkmark icon + number** (blue) — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). The number is exactly how many are still missing — 2 if it has none yet, 1 if it already has one.
 
 | Merge conflicts | QA pending | Needs approvals |

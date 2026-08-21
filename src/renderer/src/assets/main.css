@@ -215,6 +215,11 @@ body {
   background: rgba(255, 107, 107, 0.15);
 }
 
+.mr-badge-success {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+}
+
 /* Custom hover tooltip for badges, via `data-tooltip` — instant and styled
    to match the dark UI, instead of the browser's native `title` tooltip
    (slow to appear, can't be styled, looks out of place here). */

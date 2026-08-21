@@ -9,10 +9,12 @@ function sortByProject(items: MergeRequestSummary[]): MergeRequestSummary[] {
 
 export function MergeRequestSection({
   title,
-  items
+  items,
+  showQaApprovedBadge = false
 }: {
   title: string
   items: MergeRequestSummary[]
+  showQaApprovedBadge?: boolean
 }): React.JSX.Element {
   return (
     <section className="mr-section">
@@ -22,7 +24,7 @@ export function MergeRequestSection({
       ) : (
         <ul className="mr-list">
           {sortByProject(items).map((mr) => (
-            <MergeRequestRow key={mr.id} mr={mr} />
+            <MergeRequestRow key={mr.id} mr={mr} showQaApprovedBadge={showQaApprovedBadge} />
           ))}
         </ul>
       )}

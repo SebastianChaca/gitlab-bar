@@ -10,7 +10,16 @@ function projectName(projectPath: string): string {
   return segments[segments.length - 1] || projectPath
 }
 
-export function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.Element {
+export function MergeRequestRow({
+  mr,
+  showQaApprovedBadge = false
+}: {
+  mr: MergeRequestSummary
+  /** `qaApproved` is computed for every MR (same as `qaPending`), but we only
+   *  want the green badge in "Awaiting Review" — showing it in "To Review" or
+   *  "New Comments" too would be noise unrelated to why that MR is there. */
+  showQaApprovedBadge?: boolean
+}): React.JSX.Element {
   async function handleClick(): Promise<void> {
     await window.api.openMergeRequest(mr.webUrl)
     if (mr.hasNewComment) {
@@ -40,6 +49,15 @@ export function MergeRequestRow({ mr }: { mr: MergeRequestSummary }): React.JSX.
               className="mr-badge mr-badge-icon"
               data-tooltip="QA pending"
               aria-label="QA pending"
+            >
+              <ClockIcon />
+            </span>
+          )}
+          {showQaApprovedBadge && mr.qaApproved && (
+            <span
+              className="mr-badge mr-badge-success mr-badge-icon"
+              data-tooltip="QA approved"
+              aria-label="QA approved"
             >
               <ClockIcon />
             </span>

@@ -97,7 +97,11 @@ function App(): React.JSX.Element {
         <MergeRequestSection title="Ready to Merge" items={view.data.readyToMerge} />
       )}
       {view.data.awaitingReview.length > 0 && (
-        <MergeRequestSection title="Awaiting Review" items={view.data.awaitingReview} />
+        <MergeRequestSection
+          title="Awaiting Review"
+          items={view.data.awaitingReview}
+          showQaApprovedBadge
+        />
       )}
     </div>
   )
