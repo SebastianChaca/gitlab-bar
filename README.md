@@ -34,9 +34,9 @@ Small icon chips on a merge request row — hover one for a one-line explanation
 - **Clock icon** (green) — the MR carries the `qa_approved` GitLab label. Only shown in "Awaiting Review" — it means QA already signed off, so what's left is just the missing code-review approvals.
 - **Checkmark icon + number** (blue) — shown on MRs in "Awaiting Review" that still need more approvals (our team policy requires two before merging). The number is exactly how many are still missing — 2 if it has none yet, 1 if it already has one.
 
-| Merge conflicts | QA pending | Needs approvals |
-|---|---|---|
-| ![Merge conflicts badge](docs/screenshots/badge-merge-conflicts.png) | ![QA pending badge](docs/screenshots/badge-qa-pending.png) | ![Needs approvals badge](docs/screenshots/badge-approval.png) |
+| Merge conflicts | QA pending | QA approved | Needs approvals |
+|---|---|---|---|
+| ![Merge conflicts badge](docs/screenshots/badge-merge-conflicts.png) | ![QA pending badge](docs/screenshots/badge-qa-pending.png) | ![QA approved badge](docs/screenshots/badge-qa-approved.png) | ![Needs approvals badge](docs/screenshots/badge-approval.png) |
 
 ## Row layout
 
