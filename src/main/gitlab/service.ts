@@ -192,32 +192,38 @@ export async function fetchMergeRequestsUpdate(): Promise<MergeRequestsResult> {
   // approvals so far, etc.) — it just falls back to "awaiting review" instead
   // of vanishing from the app entirely. An MR assigned today with no
   // approvals and no comments yet must still be visible somewhere.
+  //
+  // Exception: `backlog`-labeled MRs are excluded from both buckets
+  // entirely — deliberately parked work that shouldn't nag for review or
+  // merge attention alongside MRs actually in flight.
   const REQUIRED_APPROVALS = 2
   const assigneeResults = await Promise.all(
-    assigneeMrs.map(async (mr) => {
-      let othersApprovedCount = 0
-      try {
-        const approvals = await fetchMergeRequestApprovals(
-          instanceUrl,
-          token,
-          mr.project_id,
-          mr.iid
-        )
-        othersApprovedCount = approvals.approved_by.filter(
-          (entry) => entry.user.username !== username
-        ).length
-      } catch (error) {
-        console.warn(`gitlab: failed to check approvals for MR ${mr.id}`, error)
-      }
+    assigneeMrs
+      .filter((mr) => !mr.labels?.includes('backlog'))
+      .map(async (mr) => {
+        let othersApprovedCount = 0
+        try {
+          const approvals = await fetchMergeRequestApprovals(
+            instanceUrl,
+            token,
+            mr.project_id,
+            mr.iid
+          )
+          othersApprovedCount = approvals.approved_by.filter(
+            (entry) => entry.user.username !== username
+          ).length
+        } catch (error) {
+          console.warn(`gitlab: failed to check approvals for MR ${mr.id}`, error)
+        }
 
-      const approvalsRemaining = Math.max(REQUIRED_APPROVALS - othersApprovedCount, 0)
-      const summary = toSummary(mr, false, approvalsRemaining)
-      // Ready to merge requires BOTH signals: code review fully approved
-      // *and* QA has signed off (the `qa_approved` label). Either one alone
-      // just means the MR moves to (or stays in) "awaiting review".
-      const isReadyToMerge = approvalsRemaining === 0 && summary.qaApproved
-      return { summary, isReadyToMerge }
-    })
+        const approvalsRemaining = Math.max(REQUIRED_APPROVALS - othersApprovedCount, 0)
+        const summary = toSummary(mr, false, approvalsRemaining)
+        // Ready to merge requires BOTH signals: code review fully approved
+        // *and* QA has signed off (the `qa_approved` label). Either one alone
+        // just means the MR moves to (or stays in) "awaiting review".
+        const isReadyToMerge = approvalsRemaining === 0 && summary.qaApproved
+        return { summary, isReadyToMerge }
+      })
   )
 
   const readyToMerge: MergeRequestSummary[] = []

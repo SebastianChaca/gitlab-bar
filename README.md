@@ -21,6 +21,8 @@ Your token is encrypted at rest using your OS's secure storage (Keychain on macO
 - **Ready to Merge** — open MRs where you're the assignee, fully cleared: 2+ approvals from other people **and** the `qa_approved` label.
 - **Awaiting Review** — every other open MR where you're the assignee: still short on approvals, still waiting on QA, or both. This is also where a freshly-assigned MR with zero approvals and zero comments shows up — it never just disappears.
 
+MRs carrying the `backlog` label never show up in "Ready to Merge" or "Awaiting Review" — deliberately parked work shouldn't nag for attention alongside what's actually in flight.
+
 An MR only disappears from these lists once it's merged, closed, or no longer matches the category's condition (e.g. you approve it, so it moves out of "To Review"; it clears both approvals and QA, so it moves from "Awaiting Review" to "Ready to Merge").
 
 ## Badges

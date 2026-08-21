@@ -166,6 +166,26 @@ describe('fetchMergeRequestsUpdate', () => {
     expect(byId.get(5)?.approvalsRemaining).toBe(2) // no approvals at all
   })
 
+  it('excludes backlog-labeled assignee MRs from both "Ready to Merge" and "Awaiting Review"', async () => {
+    const backlogged = mr({ id: 1, labels: ['backlog', 'qa_approved'] })
+    const inFlight = mr({ id: 2 })
+
+    vi.mocked(client.fetchAssigneeMergeRequests).mockResolvedValue([backlogged, inFlight])
+
+    const result = await fetchMergeRequestsUpdate()
+
+    expect(result.readyToMerge.map((m) => m.id)).not.toContain(1)
+    expect(result.awaitingReview.map((m) => m.id)).not.toContain(1)
+    expect(result.awaitingReview.map((m) => m.id)).toContain(2)
+    // The backlogged MR's approvals should never even be checked.
+    expect(client.fetchMergeRequestApprovals).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      backlogged.project_id,
+      backlogged.iid
+    )
+  })
+
   it('keeps an assignee MR in "awaiting review" instead of dropping it when the approvals fetch fails', async () => {
     vi.mocked(client.fetchAssigneeMergeRequests).mockResolvedValue([mr({ id: 1 })])
     vi.mocked(client.fetchMergeRequestApprovals).mockRejectedValue(new Error('network error'))
